@@ -1,4 +1,3 @@
-import os
 import subprocess
 from pathlib import Path
 from tkinter import Tk, filedialog, messagebox
@@ -10,12 +9,24 @@ def merge_selected_files(file_paths):
 
     # Convert to Path objects and sort
     files = sorted(Path(fp) for fp in file_paths)
+    input_extension = files[0].suffix.lower()
+    default_filename = f"merged_videos{input_extension}"
+    initial_dir = files[0].parent
 
-    # Use first file to determine extension and output folder
-    output_extension = files[0].suffix.lower()
-    output_folder = files[0].parent
-    output_filename = f'merged_output{output_extension}'
-    output_file = output_folder / output_filename
+    # Ask user where to save the output file
+    output_path = filedialog.asksaveasfilename(
+        title="Save Merged File As",
+        defaultextension=input_extension,
+        initialdir=initial_dir,
+        initialfile=default_filename,
+        filetypes=[(f"{input_extension.upper()} Video", f"*{input_extension}")]
+    )
+
+    if not output_path:
+        messagebox.showinfo("Cancelled", "No output file was selected.")
+        return
+
+    output_file = Path(output_path)
 
     with open(output_file, 'wb') as outfile:
         for file in files:
@@ -30,7 +41,7 @@ def merge_selected_files(file_paths):
     )
 
     if open_folder:
-        subprocess.run(['explorer', str(output_folder)])
+        subprocess.run(['explorer', str(output_file.parent)])
 
 def choose_files_and_merge():
     root = Tk()
