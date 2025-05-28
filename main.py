@@ -1,34 +1,51 @@
 import os
+import re
 from pathlib import Path
-import sys
+from tkinter import Tk, filedialog
+from tkinter.messagebox import showinfo
 
-def merge_ts_like_files(folder_path, extension, output_filename):
-    folder = Path(folder_path)
-    if not folder.is_dir():
-        print("Invalid folder path.")
-        return
+# Supported video file extensions
+VIDEO_EXTS = ['.ts', '.mts', '.m2ts', '.mod']
 
-    # Normalize extension (e.g., .TS -> .ts)
-    extension = extension.lower().lstrip('.')
-    output_file = folder / output_filename
+def is_incremental_name(filename):
+    """Check if a file has an incremental-style name (e.g., moviea, movieb, 0001, 0002)."""
+    stem = filename.stem.lower()
+    return bool(re.search(r'\d+$', stem) or re.search(r'[a-z]+$', stem))
 
-    # Find all matching files and sort them by name
-    video_files = sorted(folder.glob(f'*.{extension}'))
+def merge_files(folder_path: Path, output_filename='merged_output.ts'):
+    # Filter video files with incremental-style names
+    video_files = [
+        f for f in folder_path.iterdir()
+        if f.suffix.lower() in VIDEO_EXTS and is_incremental_name(f)
+    ]
 
     if not video_files:
-        print(f"No .{extension} files found in {folder}")
+        showinfo("No Files Found", "No matching incremental video files found.")
         return
+
+    # Sort files alphabetically (which works for names like 0001, 0002 or moviea, movieb)
+    video_files.sort()
+
+    output_file = folder_path / output_filename
 
     with open(output_file, 'wb') as outfile:
         for file in video_files:
-            print(f"Adding: {file.name}")
+            print(f"Merging: {file.name}")
             with open(file, 'rb') as f:
                 outfile.write(f.read())
 
-    print(f"\n✅ Merged {len(video_files)} files into {output_file}")
+    showinfo("Merge Complete", f"Merged {len(video_files)} files into:\n{output_file}")
+
+def choose_folder_and_merge():
+    root = Tk()
+    root.withdraw()  # Hide the main tkinter window
+    folder_selected = filedialog.askdirectory(title="Select Folder Containing Video Segments")
+
+    if not folder_selected:
+        showinfo("Cancelled", "No folder selected.")
+        return
+
+    merge_files(Path(folder_selected))
 
 if __name__ == '__main__':
-    folder = input("Enter path to folder containing split video files: ").strip('"')
-    ext = input("Enter the file extension (e.g., ts, mts, m2ts, mod): ").strip().lower()
-    out = input("Enter output filename (e.g., merged.ts): ").strip()
-    merge_ts_like_files(folder, ext, out)
+    choose_folder_and_merge()
