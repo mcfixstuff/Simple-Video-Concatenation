@@ -1,51 +1,37 @@
 import os
-import re
 from pathlib import Path
 from tkinter import Tk, filedialog
 from tkinter.messagebox import showinfo
 
-# Supported video file extensions
-VIDEO_EXTS = ['.ts', '.mts', '.m2ts', '.mod']
-
-def is_incremental_name(filename):
-    """Check if a file has an incremental-style name (e.g., moviea, movieb, 0001, 0002)."""
-    stem = filename.stem.lower()
-    return bool(re.search(r'\d+$', stem) or re.search(r'[a-z]+$', stem))
-
-def merge_files(folder_path: Path, output_filename='merged_output.ts'):
-    # Filter video files with incremental-style names
-    video_files = [
-        f for f in folder_path.iterdir()
-        if f.suffix.lower() in VIDEO_EXTS and is_incremental_name(f)
-    ]
-
-    if not video_files:
-        showinfo("No Files Found", "No matching incremental video files found.")
+def merge_selected_files(file_paths, output_filename='merged_output.ts'):
+    if not file_paths:
+        showinfo("No Files Selected", "You did not select any files.")
         return
 
-    # Sort files alphabetically (which works for names like 0001, 0002 or moviea, movieb)
-    video_files.sort()
+    # Convert to Path objects and sort
+    files = sorted(Path(fp) for fp in file_paths)
 
-    output_file = folder_path / output_filename
+    # Use the folder of the first file as the output location
+    output_file = files[0].parent / output_filename
 
     with open(output_file, 'wb') as outfile:
-        for file in video_files:
+        for file in files:
             print(f"Merging: {file.name}")
             with open(file, 'rb') as f:
                 outfile.write(f.read())
 
-    showinfo("Merge Complete", f"Merged {len(video_files)} files into:\n{output_file}")
+    showinfo("Merge Complete", f"Merged {len(files)} files into:\n{output_file}")
 
-def choose_folder_and_merge():
+def choose_files_and_merge():
     root = Tk()
-    root.withdraw()  # Hide the main tkinter window
-    folder_selected = filedialog.askdirectory(title="Select Folder Containing Video Segments")
+    root.withdraw()  # Hide main tkinter window
 
-    if not folder_selected:
-        showinfo("Cancelled", "No folder selected.")
-        return
+    file_paths = filedialog.askopenfilenames(
+        title="Select Video Files to Merge",
+        filetypes=[("Video files", "*.ts *.mts *.m2ts *.mod"), ("All files", "*.*")]
+    )
 
-    merge_files(Path(folder_selected))
+    merge_selected_files(file_paths)
 
 if __name__ == '__main__':
-    choose_folder_and_merge()
+    choose_files_and_merge()
