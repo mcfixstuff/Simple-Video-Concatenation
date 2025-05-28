@@ -1,18 +1,21 @@
 import os
+import subprocess
 from pathlib import Path
-from tkinter import Tk, filedialog
-from tkinter.messagebox import showinfo
+from tkinter import Tk, filedialog, messagebox
 
-def merge_selected_files(file_paths, output_filename='merged_output.ts'):
+def merge_selected_files(file_paths):
     if not file_paths:
-        showinfo("No Files Selected", "You did not select any files.")
+        messagebox.showinfo("No Files Selected", "You did not select any files.")
         return
 
     # Convert to Path objects and sort
     files = sorted(Path(fp) for fp in file_paths)
 
-    # Use the folder of the first file as the output location
-    output_file = files[0].parent / output_filename
+    # Use first file to determine extension and output folder
+    output_extension = files[0].suffix.lower()
+    output_folder = files[0].parent
+    output_filename = f'merged_output{output_extension}'
+    output_file = output_folder / output_filename
 
     with open(output_file, 'wb') as outfile:
         for file in files:
@@ -20,7 +23,14 @@ def merge_selected_files(file_paths, output_filename='merged_output.ts'):
             with open(file, 'rb') as f:
                 outfile.write(f.read())
 
-    showinfo("Merge Complete", f"Merged {len(files)} files into:\n{output_file}")
+    # Ask if user wants to open folder
+    open_folder = messagebox.askyesno(
+        "Merge Complete",
+        f"Merged {len(files)} files into:\n{output_file.name}\n\nOpen output folder?"
+    )
+
+    if open_folder:
+        subprocess.run(['explorer', str(output_folder)])
 
 def choose_files_and_merge():
     root = Tk()
